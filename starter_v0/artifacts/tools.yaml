@@ -8,7 +8,7 @@
 tools:
   # ---------------- Core tools ----------------
   - name: clarify
-    description: "Gửi một câu hỏi cho người dùng."
+    description: "Hỏi người dùng để bổ sung thông tin bắt buộc hoặc làm rõ giá trị mơ hồ trước khi gọi tool khác. Không dùng giá trị tự đoán để thay cho câu trả lời của người dùng. Dùng response_type=text khi thiếu asset_id hoặc employee_id; dùng response_type=choice với options chính xác [production, staging] khi environment không rõ."
     parameters:
       type: object
       properties:
@@ -18,7 +18,7 @@ tools:
       required: [question]
 
   - name: search_kb
-    description: "Tìm hướng dẫn hỗ trợ kỹ thuật."
+    description: "Tìm hướng dẫn xử lý sự cố trong knowledge base nội bộ. Khi yêu cầu nêu rõ nhóm sự cố như VPN, email, Wi-Fi, printing, account, security, hardware, software hoặc meeting room, phải truyền category tương ứng; query chứa mã lỗi hoặc triệu chứng vẫn được truyền cùng category. Không dùng tool này để đọc trạng thái shared service hoặc diagnostic snapshot của asset."
     parameters:
       type: object
       properties:
@@ -28,7 +28,7 @@ tools:
       required: [query]
 
   - name: check_service_status
-    description: "Kiểm tra trạng thái một dịch vụ."
+    description: "Đọc trạng thái của một shared service trong môi trường đã xác nhận. Không dùng cho chẩn đoán một asset; chỉ dùng environment=production hoặc staging. Nếu người dùng đưa môi trường khác hoặc mơ hồ như demo, gọi clarify trước và không tự chuyển đổi giá trị."
     parameters:
       type: object
       properties:
@@ -37,7 +37,7 @@ tools:
       required: [service]
 
   - name: inspect_device
-    description: "Kiểm tra thông tin và chẩn đoán thiết bị."
+    description: "Đọc diagnostic snapshot của đúng một asset. Chỉ gọi khi người dùng đã cung cấp asset_id cụ thể; không tự đoán asset_id và không dùng tool này để kiểm tra trạng thái shared service. Trong multi-turn, dùng asset_id mới nhất đã được người dùng xác nhận."
     parameters:
       type: object
       properties:
@@ -46,7 +46,7 @@ tools:
       required: [asset_id]
 
   - name: lookup_user
-    description: "Tra cứu người dùng trong danh bạ hỗ trợ."
+    description: "Tra cứu đúng một nhân viên theo employee_id cụ thể. Không suy ra employee_id từ tên hoặc phòng ban; nếu thiếu employee_id, gọi clarify trước."
     parameters:
       type: object
       properties:
@@ -75,18 +75,18 @@ tools:
 
   # ---------------- Optional/advanced tools ----------------
   - name: search_device_info
-    description: "Tìm thông tin công khai về một model thiết bị trên web. Chỉ truyền hãng, model và loại thông tin; không truyền asset ID, employee ID hoặc dữ liệu nội bộ."
+    description: "Tìm thông tin công khai về một model thiết bị trên web. Chỉ truyền manufacturer, model và query_type công khai. Tuyệt đối không truyền asset ID, employee ID, serial number, hostname, internal hostname, location, assigned user, diagnostics, credential hoặc dữ liệu nội bộ; nếu yêu cầu chứa các trường này, phải yêu cầu người dùng loại bỏ chúng trước khi tìm kiếm."
     parameters:
       type: object
       properties:
-        manufacturer: {type: string, description: "Hãng sản xuất công khai, ví dụ Lenovo"}
-        model: {type: string, description: "Tên model công khai, ví dụ ThinkPad T14 Gen 4"}
+        manufacturer: {type: string, description: "Chỉ tên hãng công khai, ví dụ Lenovo; không chứa asset ID, employee ID, serial hoặc hostname"}
+        model: {type: string, description: "Chỉ tên model sản phẩm công khai, ví dụ ThinkPad T14 Gen 4; không chứa serial, hostname hoặc định danh nội bộ"}
         query_type: {type: string, enum: [specs, drivers, support, compatibility], default: "support", description: "Loại thông tin cần tìm"}
         max_results: {type: integer, default: 3, description: "Số kết quả, tối đa 5"}
       required: [manufacturer, model, query_type]
 
   - name: policy
-    description: "Tìm trong chính sách IT nội bộ."
+    description: "Tìm trong chính sách IT nội bộ. Chọn policy_area theo chủ đề chính: access_control cho account, unlock, identity hoặc MFA; data_privacy cho password, token, secret, transcript hoặc dữ liệu nhạy cảm; incident_response cho phân loại incident và priority của sự cố; service_operations cho thay đổi hoặc vận hành cấu hình dịch vụ; ticketing cho quy tắc tạo ticket và confirmation; external_tools cho việc sử dụng công cụ bên ngoài. Không dùng policy_area=all khi câu hỏi khớp rõ một nhóm trên."
     parameters:
       type: object
       properties:
@@ -96,12 +96,12 @@ tools:
       required: [query]
 
   - name: create_ticket
-    description: "Tạo một ticket hỗ trợ."
+    description: "Tạo ticket local và làm thay đổi trạng thái. Chỉ gọi sau khi người dùng xác nhận rõ payload hiện tại. Nếu yêu cầu ticket nhắc đến asset ID, luôn truyền asset_id riêng dù ID cũng xuất hiện trong summary; giữ asset_id và các field khác từ các lượt trước sau khi user chỉnh sửa."
     parameters:
       type: object
       properties:
         summary: {type: string, default: "", description: "Tóm tắt sự cố"}
         priority: {type: string, enum: [low, medium, high, critical], default: "medium", description: "Mức ưu tiên"}
-        asset_id: {type: string, default: "", description: "Mã tài sản nếu có"}
+        asset_id: {type: string, default: "", description: "Mã tài sản cụ thể. Nếu asset ID xuất hiện ở bất kỳ lượt liên quan nào, phải truyền riêng field này; không chỉ để ID trong summary."}
         confirmed: {type: boolean, default: false, description: "Đã được người dùng xác nhận"}
       required: [summary]
