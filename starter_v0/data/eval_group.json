@@ -3,5 +3,293 @@
   "dataset_role": "group",
   "description": "Template intentionally left empty. The team must write exactly 10 original IT helpdesk cases: 5 single-turn query cases and 5 multi-turn turns cases.",
   "allowed_failure_types": ["wrong_tool", "wrong_arg_value", "wrong_boundary", "unnecessary_tool", "out_of_scope", "missing_info"],
-  "cases": []
+  "cases": [
+    {
+      "id": "G01_ambiguous_service_no_detail",
+      "phase": "B",
+      "suite": "group",
+      "query": "Dịch vụ đang chậm quá, kiểm tra giúp mình với.",
+      "failure_type": "missing_info",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "clarify",
+            "args": {
+              "response_type": "text"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "clarify_service_and_environment",
+        "difficulty": "medium",
+        "what_it_tests": "Không nêu service cụ thể (vpn/email/...) lẫn environment; agent phải hỏi lại thay vì đoán service mặc định."
+      }
+    },
+    {
+      "id": "G02_out_of_scope_translation",
+      "phase": "B",
+      "suite": "group",
+      "query": "Bạn dịch giúp mình đoạn văn tiếng Anh này sang tiếng Việt được không?",
+      "failure_type": "out_of_scope",
+      "expect": {
+        "no_tool": true,
+        "behavior": "refuse"
+      },
+      "metadata": {
+        "skill": "out_of_scope_translation",
+        "difficulty": "easy",
+        "what_it_tests": "Yêu cầu dịch thuật không thuộc phạm vi IT helpdesk, không được gọi bất kỳ tool nào."
+      }
+    },
+    {
+      "id": "G03_urgent_ticket_still_confirm",
+      "phase": "B",
+      "suite": "group",
+      "query": "Tạo ngay ticket ưu tiên critical báo cáo mail server production bị sập hoàn toàn, gấp lắm rồi!",
+      "failure_type": "wrong_boundary",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "clarify",
+            "args": {
+              "response_type": "yes_no"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "confirm_write_even_urgent",
+        "difficulty": "medium",
+        "what_it_tests": "Dù yêu cầu khẩn cấp, tạo ticket vẫn là write action nên phải xác nhận trước, không được tạo thẳng vì lý do gấp."
+      }
+    },
+    {
+      "id": "G04_policy_password_change",
+      "phase": "B",
+      "suite": "group",
+      "query": "Chính sách công ty quy định bao lâu phải đổi mật khẩu Wi-Fi một lần?",
+      "failure_type": "wrong_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "search_kb",
+            "args": {
+              "category": "wifi"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "route_policy_howto",
+        "difficulty": "easy",
+        "what_it_tests": "Câu hỏi về chính sách/quy định phải tra knowledge base, không gọi status hay device inspection."
+      }
+    },
+    {
+      "id": "G05_two_assets_security",
+      "phase": "B",
+      "suite": "group",
+      "query": "Kiểm tra bảo mật của cả hai máy LT-501 và LT-502 giúp mình.",
+      "failure_type": "wrong_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "inspect_device",
+            "args": {
+              "asset_id": "LT-501",
+              "check": "security"
+            }
+          },
+          {
+            "name": "inspect_device",
+            "args": {
+              "asset_id": "LT-502",
+              "check": "security"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "multiple_assets_same_check",
+        "difficulty": "hard",
+        "what_it_tests": "Hai asset ID riêng biệt phải sinh hai lời gọi inspect_device, không gộp chung một argument hoặc bỏ sót máy."
+      }
+    },
+    {
+      "id": "G06_ambiguous_then_provide_asset",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Máy tính bàn của phòng kế toán bị treo, xem giúp mình."
+        },
+        {
+          "role": "user",
+          "content": "Mã máy là DT-077."
+        },
+        {
+          "role": "user",
+          "content": "Kiểm tra tổng thể thôi."
+        }
+      ],
+      "failure_type": "missing_info",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "inspect_device",
+            "args": {
+              "asset_id": "DT-077",
+              "check": "all"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "multiturn_clarify_then_execute",
+        "difficulty": "medium",
+        "what_it_tests": "Sau khi hỏi lại và nhận asset ID ở lượt sau, agent phải dùng đúng asset đó với check mới nhất, không đoán trước khi có mã máy."
+      }
+    },
+    {
+      "id": "G07_correct_asset_and_change_check",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Kiểm tra hiệu năng máy DT-050."
+        },
+        {
+          "role": "user",
+          "content": "À nhầm, mã đúng là DT-055."
+        },
+        {
+          "role": "user",
+          "content": "Thật ra kiểm tra bảo mật thôi, không cần hiệu năng."
+        }
+      ],
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "inspect_device",
+            "args": {
+              "asset_id": "DT-055",
+              "check": "security"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "multiturn_correction_and_intent_change",
+        "difficulty": "hard",
+        "what_it_tests": "Cả asset ID lẫn loại check đều bị thay đổi ở các lượt sau; agent phải dùng giá trị mới nhất của cả hai, không giữ performance hay DT-050 cũ."
+      }
+    },
+    {
+      "id": "G08_cancel_ticket_request",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Tạo ticket báo lỗi máy in PR-220 ở tầng 3."
+        },
+        {
+          "role": "user",
+          "content": "Thôi khoan, để mình hỏi lại đồng nghiệp đã, đừng tạo ticket vội."
+        },
+        {
+          "role": "user",
+          "content": "Cảm ơn, tạm thời chưa cần làm gì thêm đâu."
+        }
+      ],
+      "failure_type": "unnecessary_tool",
+      "expect": {
+        "no_tool": true,
+        "behavior": "answer_without_tool"
+      },
+      "metadata": {
+        "skill": "multiturn_cancel_write_action",
+        "difficulty": "hard",
+        "what_it_tests": "Yêu cầu hủy ở lượt sau phải thắng yêu cầu tạo ticket ban đầu; agent không được tạo ticket, không cần hỏi xác nhận thêm, chỉ cần phản hồi không gọi tool."
+      }
+    },
+    {
+      "id": "G09_carry_and_switch_environment",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Trạng thái VPN staging hiện thế nào?"
+        },
+        {
+          "role": "user",
+          "content": "Chuyển sang kiểm tra email cùng environment đó giúp mình."
+        },
+        {
+          "role": "user",
+          "content": "Không, đổi qua production luôn."
+        }
+      ],
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "check_service_status",
+            "args": {
+              "service": "email",
+              "environment": "production"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "multiturn_carry_then_override_environment",
+        "difficulty": "hard",
+        "what_it_tests": "Service đổi từ vpn sang email ở lượt 2 (giữ nguyên environment staging), rồi environment lại bị đổi sang production ở lượt 3; agent phải dùng đúng cặp email + production cuối cùng."
+      }
+    },
+    {
+      "id": "G10_policy_lookup_then_ticket_after_confirmation",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Chính sách gia hạn license phần mềm Adobe của công ty là gì?"
+        },
+        {
+          "role": "user",
+          "content": "Ok hiểu rồi. Vậy tạo ticket xin gia hạn license Adobe cho máy DT-090, mức medium giúp mình."
+        },
+        {
+          "role": "user",
+          "content": "Đúng rồi, xác nhận tạo ticket đó luôn."
+        }
+      ],
+      "failure_type": "wrong_boundary",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "create_ticket",
+            "args": {
+              "asset_id": "DT-090",
+              "category": "license_renewal",
+              "priority": "medium"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "multiturn_policy_then_confirmed_ticket",
+        "difficulty": "hard",
+        "what_it_tests": "Tra cứu chính sách (search_kb) ở lượt đầu không được lẫn vào write action; ticket chỉ được tạo sau khi user xác nhận rõ ràng ở lượt cuối, với đúng asset/category/priority đã thống nhất."
+      }
+    }
+  ]
 }
+
